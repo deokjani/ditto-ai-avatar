@@ -124,179 +124,23 @@ Kling AI 아바타 비디오 (base.mp4)
          ↓
 사용자 입력 (HTML/JavaScript)
          ↓
-REST API 요청 → AI 응답 생성 (GPT-4o)
+REST API 요청 (/chat)
          ↓
-asyncio.Queue (비동기 작업 큐)
+AI 응답 생성 (GPT-4o + LangChain)
          ↓
-백그라운드 워커:
+즉시 텍스트 응답 반환 (사용자에게 표시)
+         ↓
+asyncio.Queue에 비디오 작업 추가
+         ↓
+백그라운드 워커에서 처리:
   ├─ Google Cloud TTS (음성 합성)
   └─ Ditto TalkingHead (립싱크 생성)
          ↓
-WebSocket 비디오 완료 알림
+WebSocket으로 비디오 완료 알림
          ↓
 트리플 버퍼링 비디오 재생 (JavaScript)
 ```
 
-## **💻 핵심 구현**
-
-### **1. TensorRT 모델 초기화 및 최적화**
-
-```python
-# model_pool.py - TensorRT 최적화 설정
-class DittoModelPool:
-    def __init__(self):
-        # TensorRT 엔진 사용
-        cfg_path = DITTO_ROOT / 'checkpoints/ditto_cfg/v0.4_hubert_cfg_trt.pkl'
-        data_root = DITTO_ROOT / 'checkpoints/ditto_trt_Ampere_Plus'
-        
-        # SDK 초기화
-        self.sdk = StreamSDK(str(cfg_path), str(data_root))
-        
-        # 속도 최적화 파라미터 적용
-        self.SPEED_OVERRIDES = {
-            'sampling_timesteps': 10,
-            'template_n_frames': 3,
-            'max_size': 512,
-        }
-        
-    def process(self, audio_path, video_path, output_path):
-        # Kling AI 비디오 + TTS 오디오 → 립싱크 비디오
-        return self.sdk.run(
-            source_path=video_path,  # Kling AI 아바타
-            audio_path=audio_path,   # Google TTS 음성
-            output_path=output_path,
-            **self.SPEED_OVERRIDES
-        )
-```
-
-### **2. Google Cloud TTS 통합**
-
-```python
-# video_processor.py - TTS 생성
-def google_tts(self, text: str, output_path: str):
-    response = requests.post(
-        "https://texttospeech.googleapis.com/v1/text:synthesize",
-        headers={"X-Goog-Api-Key": TTS_API_KEY},
-        json={
-            "input": {"text": text},
-            "voice": {
-                "languageCode": "en-US",
-                "name": "en-US-Chirp-HD-F",
-            },
-            "audioConfig": {
-                "audioEncoding": "LINEAR16",
-                "sampleRateHertz": 16000,
-                "speakingRate": 1.1,  # 약간 빠르게 (1.0 → 1.1)
-            }
-        }
-    )
-    
-    # 립싱크 동기화를 위한 패딩
-    silence_front = np.zeros(int(16000 * 0.15), dtype=np.float32)  # 앞 0.15초
-    silence_back = np.zeros(int(16000 * 0.1), dtype=np.float32)    # 뒤 0.1초
-    padded_audio = np.concatenate([silence_front, audio_array, silence_back])
-```
-
-### **3. WebSocket 비디오 완료 알림**
-
-```python
-# services.py - 비디오 생성 완료 시 WebSocket 푸시
-async def process_queue_worker(self):
-    while True:
-        task = await self.video_queue.get()
-        
-        # TTS + Ditto 처리 (별도 스레드)
-        result = await asyncio.to_thread(
-            self.processor.process_message_with_audio,
-            task.user_text,
-            task.ai_response
-        )
-        
-        # WebSocket으로 비디오 완료 알림
-        await self.broadcast({
-            'type': 'video_ready',
-            'data': {
-                'video_url': f"/video/{Path(result['video_path']).name}",
-                'audio_url': f"/audio/{Path(result['audio_path']).name}",
-                'duration': result['duration']
-            }
-        })
-```
-
-### **4. 트리플 버퍼링 비디오 플레이어 (JavaScript)**
-
-```javascript
-// main.js - 3개 레이어 순환 재생
-class VideoManager {
-    constructor() {
-        this.layers = [
-            { element: document.getElementById('videoLayer1'), video: document.getElementById('video1') },
-            { element: document.getElementById('videoLayer2'), video: document.getElementById('video2') },
-            { element: document.getElementById('videoLayer3'), video: document.getElementById('video3') }
-        ];
-        this.currentLayerIndex = 0;
-    }
-    
-    async switchToVideo(url, videoType, audioUrl) {
-        const nextLayerIndex = (this.currentLayerIndex + 1) % 3;
-        const nextLayer = this.layers[nextLayerIndex];
-        
-        // 다음 레이어에 비디오 로드
-        nextLayer.video.src = url;
-        nextLayer.video.loop = (videoType === 'default');
-        await nextLayer.video.play();
-        
-        // TTS 오디오 동기화
-        if (audioUrl && videoType === 'response') {
-            this.audioPlayer.src = audioUrl;
-            this.audioPlayer.play();
-        }
-        
-        // CSS 페이드 전환
-        nextLayer.element.classList.add('active');
-        
-        // 300ms 후 이전 레이어 제거
-        setTimeout(() => {
-            this.layers[this.currentLayerIndex].element.classList.remove('active');
-            this.currentLayerIndex = nextLayerIndex;
-        }, 300);
-    }
-}
-```
-
-### **5. WebSocket 연결 관리 (JavaScript)**
-
-```javascript
-// main.js - WebSocket 비디오 알림 수신
-function connectWebSocket() {
-    const wsUrl = `ws://${window.location.host}/ws`;
-    socket = new WebSocket(wsUrl);
-    
-    socket.onopen = function() {
-        // 30초마다 ping으로 연결 유지
-        setInterval(() => {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send('ping');
-            }
-        }, 30000);
-    };
-    
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'video_ready') {
-            // 비디오 큐에 추가
-            videoManager.addToQueue({
-                url: data.data.video_url,
-                audioUrl: data.data.audio_url
-            });
-        }
-    };
-    
-    socket.onclose = function() {
-        setTimeout(connectWebSocket, 3000);  // 3초 후 재연결
-    };
-}
-```
 
 ## **🚀 빠른 시작**
 
@@ -335,10 +179,12 @@ conda activate ditto
 
 ### **4. 서버 실행**
 ```bash
-python src/main.py  # http://localhost:7136
+python src/main.py  # http://localhost:7135
 ```
 
-브라우저에서 `http://localhost:7136` 접속
+브라우저에서 `http://localhost:7135` 접속
+
+## **📁 프로젝트 구조**
 
 ## **📁 프로젝트 구조**
 
@@ -367,17 +213,15 @@ ditto-ai-avatar/
 │   └── ditto_trt_Ampere_Plus/  # TensorRT 엔진
 │
 ├── example/
-│   └── base.mp4            # Kling AI 아바타 비디오
-│
-└── docker-compose.yml
+    └── base.mp4            # Kling AI 아바타 비디오
 ```
 
 ## **🔧 기술적 특징**
 
 ### **TensorRT 최적화**
-- FP16 정밀도로 메모리 50% 절감
-- 커널 퓨전으로 연산 최적화
-- A100 GPU 최적화 (Ampere_Plus)
+- **FP16 정밀도**: 32비트 → 16비트로 메모리 50% 절감
+- **커널 퓨전**: 여러 연산을 하나로 합쳐 메모리 접근 최소화
+- **Ampere_Plus**: A100 GPU 아키텍처에 최적화된 엔진
 
 ### **비동기 처리**
 - FastAPI + asyncio 완전 비동기 구조
@@ -387,12 +231,13 @@ ditto-ai-avatar/
 ### **WebSocket 통신**
 - 비디오 생성 완료 알림 전용
 - 자동 재연결 메커니즘 (3초)
-- 30초 ping/pong 연결 유지
+- 30초 ping/pong으로 연결 유지 (타임아웃 방지)
 
 ### **비디오 재생**
 - 트리플 버퍼링으로 끊김 제거
 - CSS transition 페이드 효과 (300ms)
-- 비디오 큐 순차 재생
+- z-index 레이어링으로 순차 재생
+- 비디오 큐 자동 관리
 
 ## **📊 성능 지표**
 
@@ -431,10 +276,3 @@ Apache License 2.0
 
 ---
 
-<div align="center">
-
-**⭐ Star를 눌러주시면 큰 힘이 됩니다!**
-
-Built with TensorRT, WebSocket, and Ditto TalkingHead
-
-</div>
