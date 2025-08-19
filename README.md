@@ -42,21 +42,38 @@ Kling AI로 생성한 아바타 비디오를 기반으로 Google Cloud TTS와 Di
 
 ### **PyTorch vs TensorRT 실측 비교**
 
-```
-📈 DIT (Diffusion) Model 처리 속도
-   PyTorch:  ████████░░░░░░░░░░░░  3.4 it/s (평균)
-   TensorRT: ████████████████████  15.2 it/s (평균)
-   속도 향상: 4.5배 ⬆
-
-📹 Video Writer 처리 속도  
-   PyTorch:  ████████████░░░░░░░░  20 it/s (평균)
-   TensorRT: ████████████████████  33 it/s (평균)
-   속도 향상: 1.65배 ⬆
-
-⏱️ 실제 처리 시간
-   전체 비디오 생성: PyTorch 2-3초 → TensorRT 1-1.5초
-   실시간 FPS: PyTorch 3 FPS → TensorRT 15 FPS
-```
+<table>
+<tr>
+<th>메트릭</th>
+<th>PyTorch</th>
+<th>TensorRT</th>
+<th>성능 향상</th>
+</tr>
+<tr>
+<td><b>DIT Model</b></td>
+<td>3.4 it/s</td>
+<td>15.2 it/s</td>
+<td><b>🚀 4.5배</b></td>
+</tr>
+<tr>
+<td><b>Video Writer</b></td>
+<td>20 it/s</td>
+<td>33 it/s</td>
+<td><b>⚡ 1.65배</b></td>
+</tr>
+<tr>
+<td><b>전체 생성 시간</b></td>
+<td>2-3초</td>
+<td>1-1.5초</td>
+<td><b>⏱️ 2배</b></td>
+</tr>
+<tr>
+<td><b>실시간 FPS</b></td>
+<td>3 FPS</td>
+<td>15 FPS</td>
+<td><b>🎯 5배</b></td>
+</tr>
+</table>
 
 ### **실측 로그**
 ```
@@ -387,21 +404,29 @@ ditto-ai-avatar/
 | **전체 파이프라인** | 2-3초 | 입력→비디오 재생 |
 | **GPU 메모리** | 12GB | A100 VRAM 사용량 |
 
-## **🐛 문제 해결**
+### **PyTorch vs TensorRT 모델 전환**
 
-### NumPy 호환성
+#### **1. 모델 설정 변경**
+`model_pool.py`에서 간단히 경로만 변경하여 TensorRT 사용:
 ```python
-# main.py - NumPy 1.26.4 패치
-import numpy as np
-np.atan2 = np.arctan2
+# PyTorch 버전 (주석 처리)
+# cfg_path = DITTO_ROOT / 'checkpoints/ditto_cfg/v0.4_hubert_cfg_pytorch.pkl'
+# data_root = DITTO_ROOT / 'checkpoints/ditto_pytorch'
+
+# TensorRT 버전 사용 (4.5배 빠름)
+cfg_path = DITTO_ROOT / 'checkpoints/ditto_cfg/v0.4_hubert_cfg_trt.pkl'
+data_root = DITTO_ROOT / 'checkpoints/ditto_trt_Ampere_Plus'
 ```
 
-### TensorRT 변환
-```bash
-# GPU가 Ampere_Plus를 지원하지 않는 경우
-python scripts/cvt_onnx_to_trt.py \
-    --onnx_dir "./checkpoints/ditto_onnx" \
-    --trt_dir "./checkpoints/ditto_trt_custom"
+#### **2. NumPy 호환성 해결**
+TensorRT 사용 시 NumPy 2.0과의 호환성 문제 해결:
+```python
+# main.py - TensorRT와 NumPy 1.26.4 호환성 패치
+import numpy as np
+np.atan2 = np.arctan2  # TensorRT가 사용하는 deprecated 함수 매핑
+np.int = int           # NumPy 2.0에서 제거된 타입 복원
+np.float = float
+np.bool = bool
 ```
 
 
