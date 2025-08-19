@@ -28,7 +28,7 @@ Kling AI로 생성한 아바타 비디오를 기반으로 Google Cloud TTS와 Di
 - **트리플 버퍼링**: 3개 비디오 레이어 순환으로 끊김 없는 전환
 - **멀티모달 통합**: GPT-4o + Google TTS + Ditto TalkingHead 파이프라인
 
-## **🛠️ Installation**
+## **🛠️ 환경 설정**
 
 ### **Tested Environment**
 
