@@ -10,7 +10,8 @@
 
 <br>
 
-https://github.com/user-attachments/assets/demo-video.mp4
+https://github.com/user-attachments/assets/194ed494-525d-4ce0-881d-2f9fc38835c5
+
 
 ✨ **실시간 립싱크 비디오 생성 데모** ✨
 
