@@ -29,14 +29,6 @@ Kling AI로 생성한 아바타 비디오를 기반으로 Google Cloud TTS와 Di
 - **트리플 버퍼링**: 3개 레이어 순환으로 끊김 없는 비디오 전환
 - **멀티모달 통합**: GPT-4o + Google TTS + Ditto TalkingHead 파이프라인
 
-## **📌 Updates**
-
-* [2024.12.20] 🔥 TensorRT 모델 통합 및 4.5배 성능 향상 달성
-* [2024.12.18] 🔥 트리플 버퍼링 비디오 플레이어 구현
-* [2024.12.15] 🔥 WebSocket 실시간 스트리밍 구현
-* [2024.12.10] 🔥 Kling AI 아바타 비디오 + Google TTS 통합
-* [2024.12.05] 🔥 프로젝트 초기 설계 및 PyTorch 모델 테스트
-
 ## **🛠️ Installation**
 
 ### **Tested Environment**
