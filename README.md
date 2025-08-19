@@ -186,8 +186,6 @@ python src/main.py  # http://localhost:7135
 
 ## **📁 프로젝트 구조**
 
-## **📁 프로젝트 구조**
-
 ```
 ditto-ai-avatar/
 ├── src/
