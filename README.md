@@ -404,21 +404,9 @@ ditto-ai-avatar/
 | **전체 파이프라인** | 2-3초 | 입력→비디오 재생 |
 | **GPU 메모리** | 12GB | A100 VRAM 사용량 |
 
-### **PyTorch vs TensorRT 모델 전환**
+### **PyTorch vs TensorRT 모델 전환시 문제점**
 
-#### **1. 모델 설정 변경**
-`model_pool.py`에서 간단히 경로만 변경하여 TensorRT 사용:
-```python
-# PyTorch 버전 (주석 처리)
-# cfg_path = DITTO_ROOT / 'checkpoints/ditto_cfg/v0.4_hubert_cfg_pytorch.pkl'
-# data_root = DITTO_ROOT / 'checkpoints/ditto_pytorch'
-
-# TensorRT 버전 사용 (4.5배 빠름)
-cfg_path = DITTO_ROOT / 'checkpoints/ditto_cfg/v0.4_hubert_cfg_trt.pkl'
-data_root = DITTO_ROOT / 'checkpoints/ditto_trt_Ampere_Plus'
-```
-
-#### **2. NumPy 호환성 해결**
+#### **NumPy 호환성 해결**
 TensorRT 사용 시 NumPy 2.0과의 호환성 문제 해결:
 ```python
 # main.py - TensorRT와 NumPy 1.26.4 호환성 패치
