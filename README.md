@@ -249,7 +249,6 @@ ditto-ai-avatar/
 
 ### **PyTorch vs TensorRT 모델 전환시 문제점**
 
-#### **NumPy 호환성 해결**
 TensorRT 사용 시 NumPy 2.0과의 호환성 문제 해결:
 ```python
 # main.py - TensorRT와 NumPy 1.26.4 호환성 패치
