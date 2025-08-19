@@ -1,0 +1,276 @@
+/* 
+ * style.css - 메인 스타일시트
+ * AI 아바타 채팅 인터페이스 스타일링
+ */
+
+/* === 전역 리셋 및 기본 설정 === */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box;  /* 패딩과 보더를 너비에 포함 */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  /* 그라데이션 배경 */
+    height: 100vh;  /* 전체 화면 높이 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* === 메인 컨테이너 === */
+.container {
+    width: 100%;
+    max-width: 500px;  /* 모바일 친화적 너비 */
+    height: 90vh;
+    background: #000;
+    border-radius: 20px;  /* 둥근 모서리 */
+    overflow: hidden;  /* 내용 넘침 숨김 */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);  /* 그림자 효과 */
+    display: flex;
+    flex-direction: column;  /* 세로 배치 */
+}
+
+/* === 비디오 섹션 (상단 60%) === */
+.video-section {
+    flex: 1;  /* 남은 공간 차지 */
+    position: relative;
+    background: #1a1a1a;  /* 어두운 배경 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.video-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 비디오 레이어 - 트리플 버퍼링 */
+.video-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;  /* 기본적으로 숨김 */
+    transition: opacity 0.3s ease-in-out;  /* 부드러운 전환 */
+    z-index: 1;
+}
+
+/* 활성 레이어만 표시 */
+.video-layer.active {
+    opacity: 1;
+    z-index: 2;  /* 위로 올림 */
+}
+
+.video-layer video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  /* 비디오 비율 유지하며 채우기 */
+}
+
+/* 오디오 플레이어 숨김 */
+#audioPlayer {
+    display: none;
+}
+
+/* 상태 표시 오버레이 */
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);  /* 상단 그라데이션 */
+    color: white;
+    z-index: 10;  /* 비디오 위에 표시 */
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.2);  /* 반투명 배경 */
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+/* 상태 점 애니메이션 */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;  /* 녹색 (정상) */
+    border-radius: 50%;
+    animation: pulse 2s infinite;  /* 펄스 애니메이션 */
+}
+
+.status-dot.waiting {
+    background: #fbbf24;  /* 노란색 (대기) */
+}
+
+.status-dot.processing {
+    background: #3b82f6;  /* 파란색 (처리중) */
+    animation: pulse 0.5s infinite;  /* 빠른 펄스 */
+}
+
+/* 펄스 애니메이션 정의 */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* === 채팅 섹션 (하단 40%) === */
+.chat-section {
+    height: 40%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 메시지 표시 영역 */
+.chat-messages {
+    flex: 1;  /* 남은 공간 차지 */
+    overflow-y: auto;  /* 세로 스크롤 */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;  /* 메시지 간격 */
+}
+
+/* 개별 메시지 스타일 */
+.message {
+    max-width: 80%;  /* 최대 너비 제한 */
+    padding: 10px 15px;
+    border-radius: 18px;  /* 둥근 말풍선 */
+    animation: fadeIn 0.3s ease;  /* 페이드인 효과 */
+}
+
+/* 페이드인 애니메이션 */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px);  /* 아래에서 위로 */
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* 사용자 메시지 (오른쪽 정렬) */
+.message.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #667eea, #764ba2);  /* 그라데이션 */
+    color: white;
+}
+
+/* AI 메시지 (왼쪽 정렬) */
+.message.ai {
+    align-self: flex-start;
+    background: #f3f4f6;  /* 연한 회색 */
+    color: #1f2937;  /* 진한 글자색 */
+}
+
+/* 메시지 시간 표시 */
+.message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+/* === 타이핑 애니메이션 === */
+.typing-message {
+    opacity: 0.9;
+}
+
+.typing-message .message-text {
+    min-height: 20px;  /* 최소 높이 확보 */
+}
+
+/* 타이핑 커서 */
+.typing-cursor {
+    display: inline-block;
+    animation: blink 1s infinite;  /* 깜빡임 */
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* 깜빡임 애니메이션 */
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* === 입력 영역 === */
+.chat-input {
+    padding: 15px;
+    background: #f9fafb;  /* 밝은 배경 */
+    border-top: 1px solid #e5e7eb;  /* 상단 경계선 */
+}
+
+.input-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* 텍스트 입력 필드 */
+.chat-input input {
+    flex: 1;  /* 남은 공간 차지 */
+    padding: 12px 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 25px;  /* 둥근 입력창 */
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s;
+}
+
+/* 입력 필드 포커스 스타일 */
+.chat-input input:focus {
+    border-color: #667eea;  /* 보라색 테두리 */
+}
+
+/* 전송 버튼 */
+.send-button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;  /* 원형 버튼 */
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+/* 버튼 호버 효과 */
+.send-button:hover {
+    transform: scale(1.1);  /* 10% 확대 */
+}
+
+/* 버튼 클릭 효과 */
+.send-button:active {
+    transform: scale(0.95);  /* 5% 축소 */
+}
+
+/* === 모바일 반응형 === */
+@media (max-width: 640px) {
+    .container {
+        max-width: 100%;  /* 전체 너비 */
+        height: 100vh;  /* 전체 높이 */
+        border-radius: 0;  /* 모서리 직각 */
+    }
+}

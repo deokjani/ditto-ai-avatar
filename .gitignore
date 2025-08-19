@@ -1,0 +1,111 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+.mypy_cache/
+
+# 가상 환경
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 프로젝트 특정 파일
+# 체크포인트 (대용량 모델 파일)
+checkpoints/
+*.pth
+*.onnx
+*.pkl
+*.pt
+*.safetensors
+*.bin
+
+# 임시 파일 및 출력
+temp/
+uploads/
+output/
+*.tmp
+*.mp4.tmp
+*.log
+
+# 캐시
+.cache/
+~/.cache/
+
+# 테스트 결과
+test_results/
+test_trainer/
+coverage.xml
+*.cover
+
+# Node.js (프론트엔드)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.production
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# 환경 변수 (민감한 정보)
+.env
+.env.*
+!.env.example
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# 데이터베이스
+*.db
+*.sqlite3
+db.sqlite3-journal
+
+# 미디어 파일 (예제 제외)
+*.mp4
+*.wav
+*.mp3
+!example/*.mp4
+!example/*.wav
+!static/default.*
+
+# 문서 빌드
+docs/_build/
+site/
+
+# OS 파일
+Thumbs.db
+Desktop.ini
+
+# 백업 파일
+*.bak
+*.backup
+*.old
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Poetry
+poetry.lock
+
+# 기타
+*.pyc
+.python-version

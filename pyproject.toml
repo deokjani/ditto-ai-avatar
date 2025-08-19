@@ -1,0 +1,70 @@
+[tool.poetry]
+name = "ditto-talkinghead"
+version = "0.1.0"
+description = "Ditto TalkingHead - AI-powered lip-sync video generation"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10,<3.11"
+# Web Framework
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+python-multipart = "^0.0.6"
+aiofiles = "^23.2.1"
+python-dotenv = "^1.0.0"
+jinja2 = "^3.1.2"
+
+# LangChain & LLM
+langchain = "^0.1.0"
+langchain-openai = "^0.0.5"
+langchain-community = "^0.0.10"
+langchain-core = "^0.1.10"
+openai = "^1.6.0"
+redis = "^5.0.1"
+
+# ML/AI Core
+torch = {version = "2.1.0", source = "pytorch"}
+torchvision = {version = "0.16.0", source = "pytorch"}
+torchaudio = {version = "2.1.0", source = "pytorch"}
+numpy = "^1.26.0"
+scipy = "^1.11.4"
+
+# TensorRT & CUDA
+tensorrt = "^10.0.0"
+onnxruntime-gpu = "^1.16.3"
+pycuda = "^2024.1"
+
+# Audio/Video Processing
+librosa = "^0.10.1"
+soundfile = "^0.12.1"
+imageio = "^2.33.0"
+imageio-ffmpeg = "^0.4.9"
+opencv-python-headless = "^4.8.1"
+scikit-image = "^0.22.0"
+filetype = "^1.2.0"
+
+# ONNX
+onnx = "^1.15.0"
+
+# Utilities
+tqdm = "^4.66.1"
+colored = "^2.2.3"
+cython = "^3.0.6"
+cuda-python = "11.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+black = "^23.12.0"
+flake8 = "^6.1.0"
+ipython = "^8.18.1"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
