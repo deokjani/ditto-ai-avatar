@@ -111,8 +111,8 @@ data_root = 'checkpoints/ditto_trt_Ampere_Plus'
 ```python
 # model_pool.py - 파라미터 튜닝
 SPEED_OVERRIDES = {
-    'sampling_timesteps': 10,    # 50 → 10 (5배 단축)
-    'template_n_frames': 3,       # 최소 프레임으로 초기화 시간 단축
+    'sampling_timesteps': 5,    # 50 → 5 
+    'template_n_frames': 1,       # 최소 프레임으로 초기화 시간 단축
     'max_size': 512,             # 1920 → 512 (해상도 조정으로 속도 향상)
 }
 ```
