@@ -86,7 +86,7 @@ class Wav2FeatHubert:
         else:
             audio_16k = audio
 
-        num_f = math.ceil(len(audio_16k) / 16000 * 25)
+        num_f = math.ceil(len(audio_16k) / 16000 * 20)
         split_len = int(sum(chunksize) * 0.04 * 16000) + 80    # 6480
 
         speech_pad = np.concatenate([

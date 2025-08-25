@@ -52,18 +52,6 @@ test_trainer/
 coverage.xml
 *.cover
 
-# Node.js (프론트엔드)
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/dist/
-frontend/build/
-frontend/.env.local
-frontend/.env.production
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-
 # 환경 변수 (민감한 정보)
 .env
 .env.*

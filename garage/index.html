@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ditto TTS 실시간 스트리밍</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .video-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        #videoCanvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            max-width: 100%;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.streaming {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.stopped {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .status.connected {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .info-item {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .info-value {
+            font-size: 1.2em;
+            color: #333;
+        }
+        .file-input-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .file-input-container input[type="file"] {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Ditto TTS 실시간 스트리밍</h1>
+        
+        <div class="video-container">
+            <canvas id="videoCanvas" width="640" height="480"></canvas>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar">0%</div>
+        </div>
+        
+        <div class="info">
+            <div class="info-item">
+                <div class="info-label">프레임 번호</div>
+                <div class="info-value" id="frameNumber">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">상태</div>
+                <div class="info-value" id="streamStatus">대기중</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">경과 시간</div>
+                <div class="info-value" id="elapsedTime">0.0초</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">FPS</div>
+                <div class="info-value" id="fps">0</div>
+            </div>
+        </div>
+        
+        <div class="file-input-container">
+            <h3>파일 선택 (선택사항)</h3>
+            <label>소스 이미지: <input type="file" id="sourceImage" accept="image/*"></label><br>
+            <label>오디오 파일: <input type="file" id="audioFile" accept="audio/*"></label>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startStream()">▶️ 스트리밍 시작</button>
+            <button id="stopBtn" onclick="stopStream()" disabled>⏹️ 중지</button>
+            <button onclick="testConnection()">🔌 연결 테스트</button>
+            <button onclick="toggleMute()" id="muteBtn">🔊 음소거</button>
+        </div>
+        
+        <div id="status" class="status stopped">
+            스트리밍 대기중...
+        </div>
+    </div>
+
+    <script>
+        // 서버 URL 설정 (외부 IP 사용)
+        const SERVER_URL = window.location.origin;  // 현재 페이지의 origin 사용
+        console.log('서버 URL:', SERVER_URL);
+        
+        // Socket.IO 연결
+        const socket = io(SERVER_URL, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+        });
+        
+        const canvas = document.getElementById('videoCanvas');
+        const ctx = canvas.getContext('2d');
+        let startTime = null;
+        let frameCount = 0;
+        let lastFrameTime = Date.now();
+        let isStreaming = false;
+        
+        // Socket.IO 이벤트 리스너
+        socket.on('connect', () => {
+            console.log('서버 연결됨');
+            updateStatus('서버 연결됨', 'connected');
+            document.getElementById('streamStatus').textContent = '연결됨';
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('서버 연결 끊김');
+            updateStatus('서버 연결 끊김', 'stopped');
+            document.getElementById('streamStatus').textContent = '연결 끊김';
+        });
+        
+        socket.on('connected', (data) => {
+            console.log('서버 메시지:', data.message);
+        });
+        
+        socket.on('video_frame', (data) => {
+            // Base64 이미지를 캔버스에 그리기
+            const img = new Image();
+            img.onload = () => {
+                // 캔버스 크기를 이미지에 맞춰 조정
+                if (canvas.width !== img.width || canvas.height !== img.height) {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = 'data:image/jpeg;base64,' + data.frame;
+            
+            // 정보 업데이트
+            frameCount++;
+            document.getElementById('frameNumber').textContent = data.frame_number || frameCount;
+            
+            // 진행률 업데이트
+            const progress = data.progress || 0;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressBar').textContent = Math.round(progress) + '%';
+            
+            // FPS 계산
+            const now = Date.now();
+            const fps = 1000 / (now - lastFrameTime);
+            lastFrameTime = now;
+            document.getElementById('fps').textContent = fps.toFixed(1);
+            
+            // 경과 시간
+            if (startTime) {
+                const elapsed = (now - startTime) / 1000;
+                document.getElementById('elapsedTime').textContent = elapsed.toFixed(1) + '초';
+            }
+        });
+        
+        // 오디오 재생을 위한 변수
+        let audioElement = null;
+        
+        socket.on('audio_data', (data) => {
+            console.log('오디오 데이터 수신');
+            
+            // 기존 오디오 정지
+            if (audioElement) {
+                audioElement.pause();
+                audioElement = null;
+            }
+            
+            // Base64를 오디오 URL로 변환
+            const audioUrl = 'data:audio/wav;base64,' + data.audio;
+            
+            // 오디오 엘리먼트 생성 및 자동 재생
+            audioElement = new Audio(audioUrl);
+            audioElement.volume = 0.8; // 볼륨 설정 (0.0 ~ 1.0)
+            audioElement.play().then(() => {
+                console.log('🔊 오디오 재생 시작');
+            }).catch(e => {
+                console.error('오디오 재생 실패:', e);
+            });
+        });
+        
+        socket.on('stream_started', () => {
+            console.log('스트리밍 시작됨');
+            updateStatus('스트리밍 중...', 'streaming');
+            startTime = Date.now();
+            frameCount = 0;
+            isStreaming = true;
+            document.getElementById('streamStatus').textContent = '스트리밍 중';
+        });
+        
+        socket.on('stream_stopped', () => {
+            console.log('스트리밍 중지됨');
+            updateStatus('스트리밍 중지됨', 'stopped');
+            isStreaming = false;
+            document.getElementById('streamStatus').textContent = '중지됨';
+            
+            // 오디오 정지
+            if (audioElement) {
+                audioElement.pause();
+                audioElement = null;
+            }
+        });
+        
+        socket.on('stream_completed', () => {
+            console.log('스트리밍 완료');
+            updateStatus('스트리밍 완료', 'stopped');
+            isStreaming = false;
+            document.getElementById('streamStatus').textContent = '완료';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        });
+        
+        socket.on('error', (data) => {
+            console.error('에러:', data.message);
+            alert('에러: ' + data.message);
+            updateStatus('에러: ' + data.message, 'stopped');
+        });
+        
+        function startStream() {
+            console.log('스트리밍 시작 요청');
+            
+            // 기본 경로 설정
+            const streamData = {
+                source_path: './example/base.png',
+                audio_path: './example/jenny.wav'
+            };
+            
+            socket.emit('start_stream', streamData);
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('streamStatus').textContent = '시작중...';
+        }
+        
+        function stopStream() {
+            console.log('스트리밍 중지 요청');
+            socket.emit('stop_stream');
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('streamStatus').textContent = '중지중...';
+        }
+        
+        function testConnection() {
+            if (socket.connected) {
+                alert('서버와 연결되어 있습니다!');
+            } else {
+                alert('서버와 연결되어 있지 않습니다. 재연결을 시도합니다...');
+                socket.connect();
+            }
+        }
+        
+        function toggleMute() {
+            if (audioElement) {
+                if (audioElement.volume > 0) {
+                    audioElement.volume = 0;
+                    document.getElementById('muteBtn').textContent = '🔇 음소거 해제';
+                } else {
+                    audioElement.volume = 0.8;
+                    document.getElementById('muteBtn').textContent = '🔊 음소거';
+                }
+            }
+        }
+        
+        function updateStatus(message, className) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + className;
+        }
+        
+        // 페이지 로드 시 연결 상태 확인
+        window.onload = function() {
+            console.log('페이지 로드 완료');
+            if (!socket.connected) {
+                updateStatus('서버 연결 중...', 'stopped');
+            }
+        };
+    </script>
+</body>
+</html>

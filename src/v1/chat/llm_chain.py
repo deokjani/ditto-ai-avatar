@@ -8,27 +8,27 @@ from langchain_community.chat_message_histories import ChatMessageHistory, Redis
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 
-import params
-from prompt import talking_prompt
+import v1.config as config
+from v1.chat.prompts import talking_prompt
 
-# 인메모리 저장소
+# 인메모리 세션 저장소
 in_memory_store: Dict[str, ChatMessageHistory] = {}
 
-# LLM 모델
+# LLM 모델 설정
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    api_key=params.OPENAI_API_KEY,
+    api_key=config.OPENAI_API_KEY,
     temperature=0.7,
     streaming=False
 )
 
 def get_message_history(session_id: str):
     """세션 히스토리 가져오기"""
-    if params.USE_REDIS:
+    if config.USE_REDIS:
         # Redis 사용 - TTL 자동 관리
         return RedisChatMessageHistory(
             session_id, 
-            url=params.REDIS_URL, 
+            url=config.REDIS_URL, 
             ttl=3600
         )
     else:

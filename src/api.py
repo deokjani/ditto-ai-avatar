@@ -1,87 +1,59 @@
 """
-API 엔드포인트
+Ditto TalkingHead API
 """
-import uuid
+import sys
 from pathlib import Path
-from fastapi import WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
 
-from schemas import VideoTask
-from services import chat_service, video_service
+# TensorRT 패치
+import numpy as np
+np.atan2 = np.arctan2
+np.int = int
+np.float = float
+np.bool = bool
+
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from v1.router import router
+from v1.services import avatar_generation_service
 
 # 경로 설정
-PROJECT_ROOT = Path(__file__).parent.parent
-TEMPLATES_DIR = PROJECT_ROOT / "templates"
-BASE_VIDEO = PROJECT_ROOT / "example" / "base.mp4"
-TEMP_DIR = Path.home() / ".cache" / "ditto_temp"
+STATIC_DIR = Path(__file__).parent.parent / "static"
 
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-
-# REST API
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-async def health_check():
-    return JSONResponse({"status": "healthy"})
-
-async def get_default_video():
-    return FileResponse(str(BASE_VIDEO), media_type='video/mp4')
-
-async def get_video(filename: str):
-    video_path = TEMP_DIR / "videos" / filename
-    if not video_path.exists():
-        return JSONResponse({"error": "Video not found"}, status_code=404)
-    return FileResponse(str(video_path), media_type='video/mp4')
-
-async def get_audio(filename: str):
-    audio_path = TEMP_DIR / "audio" / filename
-    if not audio_path.exists():
-        return JSONResponse({"error": "Audio not found"}, status_code=404)
-    return FileResponse(str(audio_path), media_type='audio/wav')
-
-# 채팅 API (REST)
-async def chat(request: Request):
-    """채팅 REST API - 즉시 응답 반환"""
-    data = await request.json()
-    user_text = data.get('text', '')
-    session_id = data.get('session_id', str(uuid.uuid4()))
-    
-    if not user_text:
-        return JSONResponse({"error": "No text provided"}, status_code=400)
-    
-    # AI 응답 생성 (invoke 방식)
-    ai_response = await chat_service.get_response(user_text, session_id)
-    
-    # 비디오 작업 큐에 추가
-    if ai_response:
-        await video_service.add_task(VideoTask(
-            user_text=user_text,
-            ai_response=ai_response,
-            session_id=session_id
-        ))
-    
-    return JSONResponse({
-        "response": ai_response,
-        "session_id": session_id
-    })
-
-# WebSocket - 비디오 스트리밍 전용
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket - 비디오 준비 알림 전용"""
-    await websocket.accept()
-    video_service.add_connection(websocket)
-    
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """생명주기 관리"""
+    await avatar_generation_service.initialize()
+    worker = asyncio.create_task(avatar_generation_service.process_queue_worker())
+    yield
+    worker.cancel()
     try:
-        # 연결 유지 (비디오 알림만 받음)
-        while True:
-            # 클라이언트의 ping/pong 메시지 처리
-            await websocket.receive_text()
-    
-    except WebSocketDisconnect:
+        await worker
+    except asyncio.CancelledError:
         pass
-    except Exception as e:
-        # WebSocket error (조용히 처리)
-        pass
-    finally:
-        video_service.remove_connection(websocket)
+
+# FastAPI 앱
+app = FastAPI(title="Ditto TalkingHead", lifespan=lifespan)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+# 정적 파일
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# 라우터 등록
+app.include_router(router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7136, log_level="info")

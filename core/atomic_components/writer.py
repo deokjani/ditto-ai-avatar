@@ -3,7 +3,7 @@ import os
 
 
 class VideoWriterByImageIO:
-    def __init__(self, video_path, fps=25, **kwargs):
+    def __init__(self, video_path, fps=20, **kwargs):
         video_format = kwargs.get("format", "mp4")  # default is mp4 format
         codec = kwargs.get("vcodec", "libx264")  # default is libx264 encoding
         quality = kwargs.get("quality")  # video quality

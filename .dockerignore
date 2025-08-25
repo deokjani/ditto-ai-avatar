@@ -1,0 +1,57 @@
+# Frontend (Next.js) - 별도 관리
+frontend/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 가상환경
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# 문서
+README.md
+LICENSE
+*.md
+
+# 테스트 파일
+test_*.py
+tests/
+pytest_cache/
+
+# 로그
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+.DS_Store
+
+# 빌드 아티팩트
+build/
+dist/
+*.egg-info/
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# 대용량 임시 파일
+temp/*.mp4
+uploads/*.mp4
+*.avi
+*.mov
